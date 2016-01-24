@@ -1,0 +1,149 @@
+Untitled
+- Delay -
+active: false
+- Duration - 
+lowMin: 1000.0
+lowMax: 1000.0
+- Count - 
+min: 0
+max: 1000
+- Emission - 
+lowMin: 2.0
+lowMax: 2.0
+highMin: 30.0
+highMax: 30.0
+relative: false
+scalingCount: 1
+scaling0: 1.0
+timelineCount: 1
+timeline0: 0.0
+- Life - 
+lowMin: 0.0
+lowMax: 0.0
+highMin: 20000.0
+highMax: 20000.0
+relative: false
+scalingCount: 2
+scaling0: 1.0
+scaling1: 1.0
+timelineCount: 2
+timeline0: 0.0
+timeline1: 1.0
+- Life Offset - 
+active: false
+- X Offset - 
+active: false
+- Y Offset - 
+active: false
+- Spawn Shape - 
+shape: point
+- Spawn Width - 
+lowMin: 0.0
+lowMax: 0.0
+highMin: 0.0
+highMax: 0.0
+relative: false
+scalingCount: 1
+scaling0: 1.0
+timelineCount: 1
+timeline0: 0.0
+- Spawn Height - 
+lowMin: 0.0
+lowMax: 0.0
+highMin: 0.0
+highMax: 0.0
+relative: false
+scalingCount: 1
+scaling0: 1.0
+timelineCount: 1
+timeline0: 0.0
+- Scale - 
+lowMin: 0.0
+lowMax: 0.0
+highMin: 5.0
+highMax: 5.0
+relative: false
+scalingCount: 1
+scaling0: 1.0
+timelineCount: 1
+timeline0: 0.0
+- Velocity - 
+active: true
+lowMin: 0.0
+lowMax: 0.0
+highMin: 60.0
+highMax: 60.0
+relative: false
+scalingCount: 6
+scaling0: 0.056179777
+scaling1: 0.07865169
+scaling2: 0.14044943
+scaling3: 0.26404494
+scaling4: 0.53370786
+scaling5: 1.0
+timelineCount: 6
+timeline0: 0.0
+timeline1: 0.20683111
+timeline2: 0.3776091
+timeline3: 0.5559772
+timeline4: 0.7703985
+timeline5: 1.0
+- Angle - 
+active: true
+lowMin: 0.0
+lowMax: 0.0
+highMin: 0.0
+highMax: 360.0
+relative: false
+scalingCount: 3
+scaling0: 1.0
+scaling1: 1.0
+scaling2: 1.0
+timelineCount: 3
+timeline0: 0.0
+timeline1: 0.60273975
+timeline2: 1.0
+- Rotation - 
+active: false
+- Wind - 
+active: false
+- Gravity - 
+active: false
+- Tint - 
+colorsCount: 3
+colors0: 1.0
+colors1: 1.0
+colors2: 1.0
+timelineCount: 1
+timeline0: 0.0
+- Transparency - 
+lowMin: 0.0
+lowMax: 0.0
+highMin: 1.0
+highMax: 1.0
+relative: false
+scalingCount: 7
+scaling0: 0.0
+scaling1: 0.039325844
+scaling2: 0.15168539
+scaling3: 0.21910113
+scaling4: 0.4213483
+scaling5: 0.6966292
+scaling6: 1.0
+timelineCount: 7
+timeline0: 0.0
+timeline1: 0.11302682
+timeline2: 0.23754789
+timeline3: 0.3256705
+timeline4: 0.5191571
+timeline5: 0.7624521
+timeline6: 0.94827586
+- Options - 
+attached: false
+continuous: true
+aligned: false
+additive: true
+behind: false
+premultipliedAlpha: false
+- Image Path -
+particle.png
