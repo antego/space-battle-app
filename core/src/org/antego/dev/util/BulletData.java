@@ -6,7 +6,16 @@ import com.badlogic.gdx.graphics.g2d.Sprite;
  * Created by anton on 11.01.2016.
  */
 public class BulletData {
-    Sprite sprite;
+    private Sprite sprite;
+    private boolean enemy;
+
+    public boolean isEnemy() {
+        return enemy;
+    }
+
+    public void setEnemy(boolean enemy) {
+        this.enemy = enemy;
+    }
 
     public Sprite getSprite() {
         return sprite;

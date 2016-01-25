@@ -2,11 +2,21 @@ package org.antego.dev.util;
 
 
 import com.badlogic.gdx.graphics.g2d.Sprite;
+import com.badlogic.gdx.math.Vector2;
 
 public class PlaneData {
     public int numOfHits;
     public volatile float acceleration;
     public Sprite sprite;
+    private final Vector2 spriteOffset;
+
+    public PlaneData(Vector2 spriteOffset) {
+        this.spriteOffset = spriteOffset;
+    }
+
+    public Vector2 getSpriteOffset() {
+        return spriteOffset;
+    }
 
     public Sprite getSprite() {
         return sprite;

@@ -233,12 +233,13 @@ public class GameScreen extends InputAdapter implements Screen {
     private Vector2 posToConvert = new Vector2();
     private Sprite drawSpriteOnBody(Body plane) {
         Sprite sprite = ((PlaneData)plane.getUserData()).getSprite();
+        Vector2 spriteOffset = ((PlaneData)plane.getUserData()).getSpriteOffset().cpy();
+        spriteOffset = WorldUtils.toScreen(spriteOffset);
         sprite.rotate(plane.getLinearVelocity().angle() - sprite.getRotation());
         posToConvert.x = plane.getPosition().x;
         posToConvert.y = plane.getPosition().y;
         WorldUtils.toScreen(posToConvert);
-        posToConvert.x = posToConvert.x - sprite.getWidth() / 2;
-        posToConvert.y = posToConvert.y - sprite.getHeight() / 2;
+        posToConvert.sub(spriteOffset);
         sprite.setPosition(posToConvert.x, posToConvert.y);
         return sprite;
     }
@@ -264,7 +265,10 @@ public class GameScreen extends InputAdapter implements Screen {
 
     private void doShoot() {
         Body bullet = WorldUtils.createBullet(world, false);
-        bullet.setTransform(plane.getPosition().add(new Vector2(1.3f, 0).rotateRad(plane.getAngle())), 0);
+        Sprite sprite = ((PlaneData)plane.getUserData()).getSprite();
+        float originOffset = ((PlaneData)plane.getUserData()).getSpriteOffset().x / WorldUtils.TO_WORLD_WIDTH / sprite.getWidth();
+        float bulletOffset = (1 - originOffset) * WorldUtils.TO_WORLD_WIDTH * sprite.getWidth();
+        bullet.setTransform(plane.getPosition().add(new Vector2(bulletOffset, 0).rotateRad(plane.getAngle())), 0);
         Vector2 tanVelo = new Vector2(0, plane.getAngularVelocity());
         //todo angular velocity
         Vector2 bulletVelocity = Constants.BULLET_VELOCITY.cpy().add(tanVelo).rotateRad(plane.getAngle());

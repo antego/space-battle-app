@@ -26,10 +26,9 @@ import static org.antego.dev.util.Constants.STARS_DENSITY;
  * Created by anton on 02.01.2016.
  */
 public class StartGameScreen implements Screen {
-    private SpriteBatch batch;
+    private SpriteBatch batch = new SpriteBatch();
     private Skin skin;
-    private Stage stage;
-    private TextButton button;
+    private Stage stage = new Stage();
     private PlanesGame game;
     private OnlineSession onlineSession;
     private Thread onlineSessionThread;
@@ -38,38 +37,32 @@ public class StartGameScreen implements Screen {
 
     public StartGameScreen(PlanesGame game) {
         this.game = game;
+
+        skin = new Skin(Gdx.files.internal("data/uiskin.json"));
         onlineSession = new OnlineSession();
         onlineSessionThread = new Thread(onlineSession);
-
-        batch = new SpriteBatch();
-        skin = new Skin(Gdx.files.internal("data/uiskin.json"));
-        stage = new Stage();
-
         int pixelWidth = Gdx.graphics.getWidth();
         int pixelHeight = Gdx.graphics.getHeight();
         stars.load(new FileHandle("menuStars.particles"), new FileHandle(""));
         ParticleEmitter emitter = stars.getEmitters().first();
         emitter.setPosition(pixelWidth / 2, pixelHeight / 2);
         stars.start();
-
+//        stars.update(8);
         final TextButton button = new TextButton("Connect and start game", skin, "default");
-
         button.setWidth(200f);
         button.setHeight(20f);
         button.setPosition(Gdx.graphics.getWidth() /2 - 100f, Gdx.graphics.getHeight()/2 - 10f);
-
         button.addListener(new ClickListener(){
             @Override
             public void clicked(InputEvent event, float x, float y){
                 try {
                     onlineSessionThread.start();
                 } catch (IllegalThreadStateException e) {
-
+                    e.printStackTrace();
                 }
                 button.setText("Session started");
             }
         });
-
         stage.addActor(button);
         Gdx.input.setInputProcessor(stage);
     }

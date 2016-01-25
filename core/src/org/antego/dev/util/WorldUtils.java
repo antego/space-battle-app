@@ -10,18 +10,21 @@ import com.badlogic.gdx.physics.box2d.BodyDef;
 import com.badlogic.gdx.physics.box2d.CircleShape;
 import com.badlogic.gdx.physics.box2d.FixtureDef;
 import com.badlogic.gdx.physics.box2d.PolygonShape;
-import com.badlogic.gdx.physics.box2d.Shape;
 import com.badlogic.gdx.physics.box2d.World;
 
+import org.antego.dev.BodyEditorLoader;
 import org.antego.dev.network.WorldParameters;
-
-import java.util.GregorianCalendar;
 
 /**
  * Created by anton on 28.12.2015.
  */
 public class WorldUtils {
+    public static final float TO_SCREEN_WIDTH = (float)Gdx.graphics.getWidth() / Constants.VIEWPORT_WIDTH;
+    public static final float TO_SCREEN_HEIGHT = (float)Gdx.graphics.getHeight() / Constants.VIEWPORT_HEIGHT;
+    public static final float TO_WORLD_WIDTH = (float)Constants.VIEWPORT_WIDTH / Gdx.graphics.getWidth();
+    public static final float TO_WORLD_HEIGHT = (float)Constants.VIEWPORT_HEIGHT / Gdx.graphics.getHeight();
     private static TextureAtlas atlas;
+
     public static World createWorld() {
         atlas = new TextureAtlas(Gdx.files.internal("explosions.atlas"));
         return new World(Constants.WORLD_GRAVITY, true);
@@ -50,34 +53,41 @@ public class WorldUtils {
     }
 
     public static Body createPlane(World world, WorldParameters parameters) {
+        Sprite planeSprite = new Sprite(new Texture(Gdx.files.internal("redship.png")));
+        BodyEditorLoader loader = new BodyEditorLoader(Gdx.files.internal("data/plane.json"));
+        Vector2 shapeOrigin = loader.getOrigin("plane", planeSprite.getWidth() * TO_WORLD_WIDTH).cpy();
+        planeSprite.setOrigin(shapeOrigin.x * TO_SCREEN_WIDTH, shapeOrigin.y * TO_SCREEN_HEIGHT);
+
         BodyDef bodyDef = new BodyDef();
         bodyDef.type = BodyDef.BodyType.DynamicBody;
         bodyDef.position.set(parameters.isLeftPlayerIsHuman() ? Constants.leftPlanePos : Constants.rightPlanePos);
         Body body = world.createBody(bodyDef);
-        PolygonShape shape = new PolygonShape();
-        shape.setAsBox(Constants.PLANE_WIDTH / 2, Constants.PLANE_HEIGHT / 2);
         FixtureDef fixtureDef = new FixtureDef();
-        fixtureDef.shape = shape;
         fixtureDef.density = Constants.PLANE_DENSITY;
         fixtureDef.filter.groupIndex = -1;
-        body.createFixture(fixtureDef);
-        shape.dispose();
+//        body.createFixture(fixtureDef);
+        loader.attachFixture(body, "plane", fixtureDef, planeSprite.getWidth() * TO_WORLD_WIDTH);
         body.setGravityScale(Constants.PLANE_GRAVITY_SCALE);
         body.setLinearVelocity(parameters.isLeftPlayerIsHuman() ? Constants.velocityVector.cpy() : Constants.velocityVector.cpy().scl(-1));
         //todo test this with ceiling
         body.setFixedRotation(true);
-        PlaneData data = new PlaneData();
-        data.setSprite(new Sprite(new Texture(Gdx.files.internal("redship.png"))));
+        PlaneData data = new PlaneData(shapeOrigin);
+        data.setSprite(planeSprite);
         body.setUserData(data);
         return body;
     }
 
     public static Body createExternalPlane(World world, WorldParameters parameters) {
         Body plane = createPlane(world, parameters);
+
+        Sprite sprite = new Sprite(new Texture(Gdx.files.internal("blueship.png")));
+        Vector2 shapeOrigin = ((PlaneData)plane.getUserData()).getSpriteOffset();
+        sprite.setOrigin(shapeOrigin.x * TO_SCREEN_WIDTH, shapeOrigin.y * TO_SCREEN_HEIGHT);
+
         plane.setTransform(parameters.isLeftPlayerIsHuman() ? Constants.rightPlanePos : Constants.leftPlanePos, 0);
         plane.setLinearVelocity(parameters.isLeftPlayerIsHuman() ? Constants.velocityVector.cpy().scl(-1) : Constants.velocityVector.cpy());
-        PlaneData data = new PlaneData();
-        data.setSprite(new Sprite(new Texture(Gdx.files.internal("blueship.png"))));
+        PlaneData data = new PlaneData(shapeOrigin);
+        data.setSprite(sprite);
         plane.setUserData(data);
         return plane;
     }
@@ -102,20 +112,21 @@ public class WorldUtils {
         }
 //        sprite.rotate(-90);
         data.setSprite(sprite);
+        data.setEnemy(enemy);
         body.setUserData(data);
         shape.dispose();
         return body;
     }
 
     public static Vector2 toScreen(Vector2 pos) {
-        pos.x = pos.x / Constants.VIEWPORT_WIDTH * Gdx.graphics.getWidth();
-        pos.y = pos.y / Constants.VIEWPORT_HEIGHT * Gdx.graphics.getHeight();
+        pos.x = pos.x * TO_SCREEN_WIDTH;
+        pos.y = pos.y * TO_SCREEN_HEIGHT;
         return pos;
     }
 
     public static Vector2 toWorld(Vector2 pos) {
-        pos.x = pos.x * Constants.VIEWPORT_WIDTH / Gdx.graphics.getWidth();
-        pos.y = pos.y * Constants.VIEWPORT_HEIGHT / Gdx.graphics.getHeight();
+        pos.x = pos.x * TO_WORLD_WIDTH;
+        pos.y = pos.y * TO_WORLD_HEIGHT;
         return pos;
     }
 }
