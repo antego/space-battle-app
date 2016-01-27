@@ -3,11 +3,13 @@ package org.antego.dev.screen;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.ParticleEffect;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
@@ -20,46 +22,43 @@ import org.antego.dev.PlanesGame;
  */
 public class MenuScreen extends InputAdapter implements Screen {
     private enum ScreenType {QUICK_GAME, FRIEND_GAME, NONE}
+
     private SpriteBatch batch = new SpriteBatch();
     private Skin skin;
     private Stage stage = new Stage();
-    private Table table;
     private PlanesGame game;
     private final ParticleEffect stars = new ParticleEffect();
     private volatile ScreenType changeTo;
 
     public MenuScreen(final PlanesGame game) {
         this.game = game;
-
+        Gdx.input.setInputProcessor(stage);
         skin = new Skin(Gdx.files.internal("data/uiskin.json"));
-        table = new Table(skin);
-        final TextButton quickGameButton = new TextButton("Quick Game", skin, "default");
-        final TextButton friendGameButton = new TextButton("Friend Game", skin, "default");
-        final TextButton quitGameButton = new TextButton("Quit", skin, "default");
-        quickGameButton.addListener(new ClickListener(){
+
+        Table rootTable = new Table();
+        rootTable.setFillParent(true);
+
+        Table table = new Table(skin);
+        table.debug();
+        final Label quickGameLabel = new Label("Quick Game", skin);
+        final Label quitLabel = new Label("Quit", skin);
+        quickGameLabel.addListener(new ClickListener(){
             @Override
             public void clicked(InputEvent event, float x, float y){
                 changeTo = ScreenType.QUICK_GAME;
             }
         });
-        friendGameButton.addListener(new ClickListener(){
-            @Override
-            public void clicked(InputEvent event, float x, float y){
-                changeTo = ScreenType.FRIEND_GAME;
-            }
-        });
-        quitGameButton.addListener(new ClickListener(){
+        quitLabel.addListener(new ClickListener(){
             @Override
             public void clicked(InputEvent event, float x, float y){
                 changeTo = ScreenType.NONE;
             }
         });
-        table.add(quickGameButton);
+        table.add(quickGameLabel).spaceBottom(40);
         table.row();
-        table.add(friendGameButton);
-        table.row();
-        table.add(quitGameButton);
-        stage.addActor(table);
+        table.add(quitLabel);
+        rootTable.add(table);
+        stage.addActor(rootTable);
     }
 
     @Override
@@ -75,11 +74,14 @@ public class MenuScreen extends InputAdapter implements Screen {
             switch (changeTo) {
                 case QUICK_GAME:
                     game.setScreen(new StartGameScreen(game));
+                    dispose();
                     break;
                 case FRIEND_GAME:
                     game.setScreen(new StartGameScreen(game));
+                    dispose();
                     break;
                 case NONE:
+                    dispose();
                     Gdx.app.exit();
             }
         }

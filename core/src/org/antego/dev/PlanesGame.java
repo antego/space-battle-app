@@ -7,14 +7,19 @@ import org.antego.dev.screen.MenuScreen;
 import org.antego.dev.screen.StartGameScreen;
 
 public class PlanesGame extends Game {
-//	public StartGameScreen startGameScreen;
-//    public GameScreen gameScreen;
+	private MenuScreen menuScreen;
 	
 	@Override
 	public void create () {
-//		startGameScreen = new StartGameScreen(this);
-//        setScreen(startGameScreen);
-        setScreen(new MenuScreen(this));
-
+        menuScreen = new MenuScreen(this);
+        setScreen(menuScreen);
 	}
+
+    public MenuScreen getMenuScreen() {
+        return menuScreen;
+    }
+
+    public void setMenuScreen(MenuScreen menuScreen) {
+        this.menuScreen = menuScreen;
+    }
 }
