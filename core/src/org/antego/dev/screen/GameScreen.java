@@ -107,10 +107,11 @@ public class GameScreen extends InputAdapter implements Screen {
         int pixelHeight = Gdx.graphics.getHeight();
         stars.load(new FileHandle("stars.particles"), new FileHandle(""));
         ParticleEmitter emitter = stars.getEmitters().first();
-        emitter.getSpawnHeight().setHigh(pixelHeight);
-        emitter.getSpawnWidth().setHigh(pixelWidth);
-        emitter.setMaxParticleCount((int) (pixelHeight * pixelWidth * STARS_DENSITY));
-        emitter.setMinParticleCount((int) (pixelHeight * pixelWidth * STARS_DENSITY));
+        emitter.getSpawnHeight().setHigh(VIEWPORT_HEIGHT * WorldUtils.TO_SCREEN_HEIGHT);
+        emitter.getSpawnWidth().setHigh(VIEWPORT_WIDTH * WorldUtils.TO_SCREEN_WIDTH);
+        float square = VIEWPORT_HEIGHT * VIEWPORT_WIDTH * WorldUtils.TO_SCREEN_HEIGHT * WorldUtils.TO_SCREEN_WIDTH;
+        emitter.setMaxParticleCount((int) (square * STARS_DENSITY));
+        emitter.setMinParticleCount((int) (square * STARS_DENSITY));
         emitter.setPosition(pixelWidth / 2, pixelHeight / 2);
         stars.start();
         stars.update(1);
@@ -119,7 +120,7 @@ public class GameScreen extends InputAdapter implements Screen {
             private void doContactLogic(Body plane, Body bullet) {
                 bodiesToDestroy.add(bullet);
 //                bullet.getUserData().setStateExplode();
-                if(plane == enemyPlane) {
+                if(plane == enemyPlane && !((BulletData)bullet.getUserData()).isEnemy()) {
                     int numOfHits = ++((PlaneData) plane.getUserData()).numOfHits;
                     session.getSenderThread().addToQueue(new ShootEvent());
                     if (numOfHits >= 3) {
@@ -199,6 +200,9 @@ public class GameScreen extends InputAdapter implements Screen {
             accumulator -= TIME_STEP;
         }
         batch.begin();
+        float starsX = (MAP_WIDTH / 2 - camera.position.x) * WorldUtils.TO_SCREEN_WIDTH;
+        float starsY = (MAP_HEIGHT / 2 - camera.position.y) * WorldUtils.TO_SCREEN_HEIGHT;
+        stars.setPosition(starsX, starsY);
         stars.draw(batch);
         Iterator<Body> iter = bulletMap.values().iterator();
         while (iter.hasNext()) {
@@ -207,7 +211,7 @@ public class GameScreen extends InputAdapter implements Screen {
             sprite.rotate(bullet.getLinearVelocity().angle() - sprite.getRotation() - 90);
             bulletPos.x = bullet.getPosition().x;
             bulletPos.y = bullet.getPosition().y;
-            WorldUtils.toScreen(bulletPos);
+            WorldUtils.toScreen(bulletPos, camera);
             bulletPos.x = bulletPos.x - sprite.getWidth() / 2;
             bulletPos.y = bulletPos.y - sprite.getHeight() / 2;
             sprite.setPosition(bulletPos.x, bulletPos.y);
@@ -223,6 +227,7 @@ public class GameScreen extends InputAdapter implements Screen {
             font.draw(batch, glyphLayout, Gdx.graphics.getWidth() / 2 - w / 2, Gdx.graphics.getHeight() / 2 + h / 2);
         }
         batch.end();
+        updateCameraPosition();
         renderer.render(world, camera.combined);
         if (changeScreen) {
             dispose();
@@ -230,15 +235,37 @@ public class GameScreen extends InputAdapter implements Screen {
         }
     }
 
+    private void updateCameraPosition() {
+        float planeX = plane.getPosition().x;
+        float planeY = plane.getPosition().y;
+        float camX = camera.position.x;
+        float camY = camera.position.y;
+        float camWidth = camera.viewportWidth;
+        float camHeight = camera.viewportHeight;
+
+        if (planeX > camX + camWidth / 2 - VIEWPORT_BUFFER && camX + camWidth / 2 < MAP_WIDTH) {
+            camera.position.x = planeX - camWidth / 2 + VIEWPORT_BUFFER;
+        } else if (planeX < camX - camWidth / 2 + VIEWPORT_BUFFER && camX - camWidth / 2 > 0) {
+            camera.position.x = planeX + camWidth / 2 - VIEWPORT_BUFFER;
+        }
+        if (planeY > camY + camHeight / 2 - VIEWPORT_BUFFER && camY + camHeight / 2 < MAP_HEIGHT) {
+            camera.position.y = planeY - camHeight / 2 + VIEWPORT_BUFFER;
+        } else if (planeY < camY - camHeight / 2 + VIEWPORT_BUFFER && camY - camHeight / 2 > 0) {
+            camera.position.y = planeY + camHeight / 2 - VIEWPORT_BUFFER;
+        }
+        camera.update();
+    }
+    //eliminate redundant object creation in render loop
     private Vector2 posToConvert = new Vector2();
     private Sprite drawSpriteOnBody(Body plane) {
         Sprite sprite = ((PlaneData)plane.getUserData()).getSprite();
         Vector2 spriteOffset = ((PlaneData)plane.getUserData()).getSpriteOffset().cpy();
-        spriteOffset = WorldUtils.toScreen(spriteOffset);
+        spriteOffset.x = spriteOffset.x * WorldUtils.TO_SCREEN_WIDTH;
+        spriteOffset.y = spriteOffset.y * WorldUtils.TO_SCREEN_HEIGHT;
         sprite.rotate(plane.getLinearVelocity().angle() - sprite.getRotation());
         posToConvert.x = plane.getPosition().x;
         posToConvert.y = plane.getPosition().y;
-        WorldUtils.toScreen(posToConvert);
+        WorldUtils.toScreen(posToConvert, camera);
         posToConvert.sub(spriteOffset);
         sprite.setPosition(posToConvert.x, posToConvert.y);
         return sprite;
@@ -284,15 +311,15 @@ public class GameScreen extends InputAdapter implements Screen {
         float angle = plane.getAngle();
 
         if (planeX < -VIEWPORT_BUFFER) {
-            plane.setTransform(planeX + VIEWPORT_WIDTH + 2 * VIEWPORT_BUFFER, planeY, angle);
-        } else if (planeX > VIEWPORT_WIDTH + VIEWPORT_BUFFER) {
-            plane.setTransform(planeX - VIEWPORT_WIDTH - 2 * VIEWPORT_BUFFER, planeY, angle);
+            plane.setTransform(planeX + MAP_WIDTH + 2 * VIEWPORT_BUFFER, planeY, angle);
+        } else if (planeX > MAP_WIDTH + VIEWPORT_BUFFER) {
+            plane.setTransform(planeX - MAP_WIDTH - 2 * VIEWPORT_BUFFER, planeY, angle);
         }
 
         if (planeY < -VIEWPORT_BUFFER) {
-            plane.setTransform(planeX, planeY + VIEWPORT_HEIGHT + 2 * VIEWPORT_BUFFER, angle);
-        } else if (planeY > VIEWPORT_HEIGHT + VIEWPORT_BUFFER) {
-            plane.setTransform(planeX, planeY - VIEWPORT_HEIGHT - 2 * VIEWPORT_BUFFER, angle);
+            plane.setTransform(planeX, planeY + MAP_HEIGHT + 2 * VIEWPORT_BUFFER, angle);
+        } else if (planeY > MAP_HEIGHT + VIEWPORT_BUFFER) {
+            plane.setTransform(planeX, planeY - MAP_HEIGHT - 2 * VIEWPORT_BUFFER, angle);
         }
     }
 

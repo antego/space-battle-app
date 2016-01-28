@@ -1,6 +1,7 @@
 package org.antego.dev.util;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
@@ -30,30 +31,10 @@ public class WorldUtils {
         return new World(Constants.WORLD_GRAVITY, true);
     }
 
-    public static Body createGround(World world) {
-        BodyDef bodyDef = new BodyDef();
-        bodyDef.position.set(new Vector2(Constants.GROUND_X, Constants.GROUND_Y));
-        Body body = world.createBody(bodyDef);
-        PolygonShape shape = new PolygonShape();
-        shape.setAsBox(Constants.GROUND_WIDTH / 2, Constants.GROUND_HEIGHT / 2);
-        body.createFixture(shape, Constants.GROUND_DENSITY);
-        shape.dispose();
-        return body;
-    }
-
-    public static Body createCeiling(World world) {
-        BodyDef bodyDef = new BodyDef();
-        bodyDef.position.set(new Vector2(Constants.CEILING_X, Constants.CEILING_Y));
-        Body body = world.createBody(bodyDef);
-        PolygonShape shape = new PolygonShape();
-        shape.setAsBox(Constants.CEILING_WIDTH / 2, Constants.CEILING_HEIGHT / 2);
-        body.createFixture(shape, Constants.CEILING_DENSITY);
-        shape.dispose();
-        return body;
-    }
-
     public static Body createPlane(World world, WorldParameters parameters) {
         Sprite planeSprite = new Sprite(new Texture(Gdx.files.internal("redship.png")));
+        float factor = Constants.MAP_HEIGHT / Constants.VIEWPORT_HEIGHT * Gdx.graphics.getHeight() / 10 / planeSprite.getHeight();
+        planeSprite.setSize(planeSprite.getWidth() * factor, planeSprite.getHeight() * factor);
         BodyEditorLoader loader = new BodyEditorLoader(Gdx.files.internal("data/plane.json"));
         Vector2 shapeOrigin = loader.getOrigin("plane", planeSprite.getWidth() * TO_WORLD_WIDTH).cpy();
         planeSprite.setOrigin(shapeOrigin.x * TO_SCREEN_WIDTH, shapeOrigin.y * TO_SCREEN_HEIGHT);
@@ -65,7 +46,6 @@ public class WorldUtils {
         FixtureDef fixtureDef = new FixtureDef();
         fixtureDef.density = Constants.PLANE_DENSITY;
         fixtureDef.filter.groupIndex = -1;
-//        body.createFixture(fixtureDef);
         loader.attachFixture(body, "plane", fixtureDef, planeSprite.getWidth() * TO_WORLD_WIDTH);
         body.setGravityScale(Constants.PLANE_GRAVITY_SCALE);
         body.setLinearVelocity(parameters.isLeftPlayerIsHuman() ? Constants.velocityVector.cpy() : Constants.velocityVector.cpy().scl(-1));
@@ -81,6 +61,8 @@ public class WorldUtils {
         Body plane = createPlane(world, parameters);
 
         Sprite sprite = new Sprite(new Texture(Gdx.files.internal("blueship.png")));
+        float factor = Constants.MAP_HEIGHT / Constants.VIEWPORT_HEIGHT * Gdx.graphics.getHeight() / 10 / sprite.getHeight();
+        sprite.setSize(sprite.getWidth() * factor, sprite.getHeight() * factor);
         Vector2 shapeOrigin = ((PlaneData)plane.getUserData()).getSpriteOffset();
         sprite.setOrigin(shapeOrigin.x * TO_SCREEN_WIDTH, shapeOrigin.y * TO_SCREEN_HEIGHT);
 
@@ -110,7 +92,6 @@ public class WorldUtils {
         } else {
             sprite = new Sprite(atlas.findRegion("bullet_2_orange"));
         }
-//        sprite.rotate(-90);
         data.setSprite(sprite);
         data.setEnemy(enemy);
         body.setUserData(data);
@@ -118,7 +99,9 @@ public class WorldUtils {
         return body;
     }
 
-    public static Vector2 toScreen(Vector2 pos) {
+    public static Vector2 toScreen(Vector2 pos, OrthographicCamera camera) {
+        pos.x = pos.x - camera.position.x + camera.viewportWidth / 2;
+        pos.y = pos.y - camera.position.y + camera.viewportHeight / 2;
         pos.x = pos.x * TO_SCREEN_WIDTH;
         pos.y = pos.y * TO_SCREEN_HEIGHT;
         return pos;
