@@ -77,16 +77,16 @@ relative: false
 scalingCount: 6
 scaling0: 0.056179777
 scaling1: 0.07865169
-scaling2: 0.14044943
-scaling3: 0.26404494
-scaling4: 0.53370786
+scaling2: 0.80898875
+scaling3: 1.0
+scaling4: 1.0
 scaling5: 1.0
 timelineCount: 6
 timeline0: 0.0
-timeline1: 0.20683111
-timeline2: 0.3776091
-timeline3: 0.5559772
-timeline4: 0.7703985
+timeline1: 0.21821631
+timeline2: 0.42504743
+timeline3: 0.45920303
+timeline4: 0.8349146
 timeline5: 1.0
 - Angle - 
 active: true
@@ -133,19 +133,19 @@ highMax: 1.0
 relative: false
 scalingCount: 7
 scaling0: 0.0
-scaling1: 0.039325844
-scaling2: 0.15168539
-scaling3: 0.21910113
-scaling4: 0.4213483
-scaling5: 0.6966292
+scaling1: 0.24157304
+scaling2: 1.0
+scaling3: 1.0
+scaling4: 1.0
+scaling5: 1.0
 scaling6: 1.0
 timelineCount: 7
 timeline0: 0.0
-timeline1: 0.11302682
-timeline2: 0.23754789
-timeline3: 0.3256705
-timeline4: 0.5191571
-timeline5: 0.7624521
+timeline1: 0.13601533
+timeline2: 0.32467052
+timeline3: 0.5181571
+timeline4: 0.76145214
+timeline5: 0.8869732
 timeline6: 0.94827586
 - Options - 
 attached: false
@@ -155,4 +155,4 @@ additive: true
 behind: false
 premultipliedAlpha: false
 - Image Path -
-particle.png
+/C:/Users/anton/AndroidStudioProjects/planes/particle.png

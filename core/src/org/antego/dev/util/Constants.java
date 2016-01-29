@@ -7,8 +7,8 @@ import com.badlogic.gdx.math.Vector2;
  * Created by anton on 28.12.2015.
  */
 public class Constants {
-    public static final int APP_WIDTH = 300;
-    public static final int APP_HEIGHT = 1000;
+    public static final int APP_WIDTH = 800;
+    public static final int APP_HEIGHT = 480;
     public static final String LOG_TAG = "Planes log";
     public static final Vector2 WORLD_GRAVITY = new Vector2(0, 0);
     public static final float TIME_STEP = 1 / 300f;

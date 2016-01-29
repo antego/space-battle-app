@@ -4,16 +4,15 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
-import com.badlogic.gdx.graphics.g2d.ParticleEffect;
-import com.badlogic.gdx.graphics.g2d.ParticleEmitter;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
 import com.badlogic.gdx.physics.box2d.Box2DDebugRenderer;
@@ -22,9 +21,16 @@ import com.badlogic.gdx.physics.box2d.ContactImpulse;
 import com.badlogic.gdx.physics.box2d.ContactListener;
 import com.badlogic.gdx.physics.box2d.Manifold;
 import com.badlogic.gdx.physics.box2d.World;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Skin;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 
 import org.antego.dev.PlanesGame;
 import org.antego.dev.events.AccelEvent;
+import org.antego.dev.events.ExitEvent;
 import org.antego.dev.events.FireEvent;
 import org.antego.dev.events.GameEvent;
 import org.antego.dev.events.RotateEvent;
@@ -66,13 +72,22 @@ public class GameScreen extends InputAdapter implements Screen {
     private final Set<Body> bodiesToDestroy = Collections.synchronizedSet(new HashSet<Body>());
     private final Map<Long, Body> bulletMap = new HashMap<Long, Body>();
     private final SpriteBatch batch = new SpriteBatch();
-    private final ParticleEffect stars = new ParticleEffect();
     private final GlyphLayout glyphLayout = new GlyphLayout();
     private final Vector2 bulletPos = new Vector2();
     private final BitmapFont font;
+    private final Sprite starsSprite;
+    private final Sprite settingsSprite;
+    private final Rectangle settingsRectangle;
+    private final Label continueLabel;
+    private final Label exitLabel;
+    private Skin skin;
+    private Stage stage = new Stage();
 
     private volatile boolean doShoot;
     private volatile boolean changeScreen;
+    private volatile boolean showSettings;
+    private volatile boolean opponentDisconnected;
+    private volatile boolean endGame;
     private long lastShootTime;
     private float accumulator;
 
@@ -94,6 +109,19 @@ public class GameScreen extends InputAdapter implements Screen {
         camera.position.set(camera.viewportWidth / 2, camera.viewportHeight / 2, 0f);
         camera.update();
 
+        starsSprite  = new Sprite(new Texture("staticStars.png"));
+        float starsSide = Math.max(MAP_HEIGHT * WorldUtils.TO_SCREEN_HEIGHT, MAP_WIDTH * WorldUtils.TO_SCREEN_WIDTH);
+        starsSprite.setSize(starsSide, starsSide);
+
+        settingsSprite = new Sprite(new Texture("settings-6-xl.png"));
+        float settingsIconSize = Gdx.graphics.getHeight() / 15;
+        settingsSprite.setSize(settingsIconSize, settingsIconSize);
+        settingsSprite.setPosition(Gdx.graphics.getWidth() - settingsIconSize * 1.5f, Gdx.graphics.getHeight() - settingsIconSize * 1.5f);
+        settingsRectangle = new Rectangle(settingsSprite.getX(),
+                                            settingsSprite.getY(),
+                                            Gdx.graphics.getWidth() - settingsSprite.getX(),
+                                            Gdx.graphics.getHeight() - settingsSprite.getY());
+
         renderer = new Box2DDebugRenderer();
         Gdx.input.setInputProcessor(this);
         updatePlaneStateService.scheduleAtFixedRate(new Runnable() {
@@ -103,24 +131,11 @@ public class GameScreen extends InputAdapter implements Screen {
             }
         }, 0, 1, TimeUnit.SECONDS);
 
-        int pixelWidth = Gdx.graphics.getWidth();
-        int pixelHeight = Gdx.graphics.getHeight();
-        stars.load(new FileHandle("stars.particles"), new FileHandle(""));
-        ParticleEmitter emitter = stars.getEmitters().first();
-        emitter.getSpawnHeight().setHigh(VIEWPORT_HEIGHT * WorldUtils.TO_SCREEN_HEIGHT);
-        emitter.getSpawnWidth().setHigh(VIEWPORT_WIDTH * WorldUtils.TO_SCREEN_WIDTH);
-        float square = VIEWPORT_HEIGHT * VIEWPORT_WIDTH * WorldUtils.TO_SCREEN_HEIGHT * WorldUtils.TO_SCREEN_WIDTH;
-        emitter.setMaxParticleCount((int) (square * STARS_DENSITY));
-        emitter.setMinParticleCount((int) (square * STARS_DENSITY));
-        emitter.setPosition(pixelWidth / 2, pixelHeight / 2);
-        stars.start();
-        stars.update(1);
-
         world.setContactListener(new ContactListener() {
             private void doContactLogic(Body plane, Body bullet) {
                 bodiesToDestroy.add(bullet);
 //                bullet.getUserData().setStateExplode();
-                if(plane == enemyPlane && !((BulletData)bullet.getUserData()).isEnemy()) {
+                if (plane == enemyPlane && !((BulletData) bullet.getUserData()).isEnemy()) {
                     int numOfHits = ++((PlaneData) plane.getUserData()).numOfHits;
                     session.getSenderThread().addToQueue(new ShootEvent());
                     if (numOfHits >= 3) {
@@ -156,9 +171,38 @@ public class GameScreen extends InputAdapter implements Screen {
             public void postSolve(Contact contact, ContactImpulse impulse) {
             }
         });
+
+        skin = new Skin(Gdx.files.internal("data/uiskin.json"));
+
+        Table rootTable = new Table();
+        rootTable.setFillParent(true);
+
+        Table table = new Table(skin);
+        table.debug();
+        continueLabel = new Label("Continue", skin);
+        exitLabel = new Label("Exit", skin);
+        continueLabel.addListener(new ClickListener(){
+            @Override
+            public void clicked(InputEvent event, float x, float y){
+                showSettings = false;
+                Gdx.input.setInputProcessor(GameScreen.this);
+            }
+        });
+        exitLabel.addListener(new ClickListener(){
+            @Override
+            public void clicked(InputEvent event, float x, float y){
+                changeScreen = true;
+            }
+        });
+        table.add(continueLabel).spaceBottom(40);
+        table.row();
+        table.add(exitLabel);
+        rootTable.add(table);
+        stage.addActor(rootTable);
     }
 
     private void swapInputProcessor() {
+        endGame = true;
         Gdx.input.setInputProcessor(new EndGameInputProcessor());
     }
 
@@ -180,7 +224,7 @@ public class GameScreen extends InputAdapter implements Screen {
             destroyBullets();
 
             GameEvent gameEvent = networkEvents.poll();
-            if (gameEvent != null) {
+            if (gameEvent != null && !endGame) {
                 applyEvent(gameEvent);
             }
             checkBoundsForBullets();
@@ -190,20 +234,18 @@ public class GameScreen extends InputAdapter implements Screen {
             accelerate(enemyPlane);
             rotateAndTruncateVelocity(plane);
             rotateAndTruncateVelocity(enemyPlane);
-
             if (doShoot) {
                 doShoot();
                 doShoot = false;
             }
-
             world.step(TIME_STEP, 6, 2);
             accumulator -= TIME_STEP;
         }
         batch.begin();
-        float starsX = (MAP_WIDTH / 2 - camera.position.x) * WorldUtils.TO_SCREEN_WIDTH;
-        float starsY = (MAP_HEIGHT / 2 - camera.position.y) * WorldUtils.TO_SCREEN_HEIGHT;
-        stars.setPosition(starsX, starsY);
-        stars.draw(batch);
+        float starsX = (VIEWPORT_WIDTH / 2 - camera.position.x) * WorldUtils.TO_SCREEN_WIDTH;
+        float starsY = (VIEWPORT_HEIGHT / 2 - camera.position.y) * WorldUtils.TO_SCREEN_HEIGHT;
+        starsSprite.setPosition(starsX, starsY);
+        starsSprite.draw(batch);
         Iterator<Body> iter = bulletMap.values().iterator();
         while (iter.hasNext()) {
             Body bullet = iter.next();
@@ -221,17 +263,21 @@ public class GameScreen extends InputAdapter implements Screen {
         sprite.draw(batch);
         sprite = drawSpriteOnBody(plane);
         sprite.draw(batch);
+        settingsSprite.draw(batch);
         if (!glyphLayout.toString().isEmpty()) {
             float w = glyphLayout.width;
             float h = glyphLayout.height;
             font.draw(batch, glyphLayout, Gdx.graphics.getWidth() / 2 - w / 2, Gdx.graphics.getHeight() / 2 + h / 2);
+        }
+        if (showSettings) {
+            stage.draw();
         }
         batch.end();
         updateCameraPosition();
         renderer.render(world, camera.combined);
         if (changeScreen) {
             dispose();
-            game.setScreen(new StartGameScreen(game));
+            game.setScreen(new StartGameScreen(game, null));
         }
     }
 
@@ -244,14 +290,18 @@ public class GameScreen extends InputAdapter implements Screen {
         float camHeight = camera.viewportHeight;
 
         if (planeX > camX + camWidth / 2 - VIEWPORT_BUFFER && camX + camWidth / 2 < MAP_WIDTH) {
-            camera.position.x = planeX - camWidth / 2 + VIEWPORT_BUFFER;
+            float newPos = planeX - camWidth / 2 + VIEWPORT_BUFFER;
+            camera.position.x = newPos + camWidth / 2 <= MAP_WIDTH ? newPos : MAP_WIDTH - camWidth / 2;
         } else if (planeX < camX - camWidth / 2 + VIEWPORT_BUFFER && camX - camWidth / 2 > 0) {
-            camera.position.x = planeX + camWidth / 2 - VIEWPORT_BUFFER;
+            float newPos = planeX + camWidth / 2 - VIEWPORT_BUFFER;
+            camera.position.x = newPos - camWidth / 2 >= 0 ? newPos : camWidth / 2;
         }
         if (planeY > camY + camHeight / 2 - VIEWPORT_BUFFER && camY + camHeight / 2 < MAP_HEIGHT) {
-            camera.position.y = planeY - camHeight / 2 + VIEWPORT_BUFFER;
+            float newPos = planeY - camHeight / 2 + VIEWPORT_BUFFER;
+            camera.position.y = newPos + camHeight / 2 <= MAP_HEIGHT ? newPos : MAP_HEIGHT - camHeight / 2;
         } else if (planeY < camY - camHeight / 2 + VIEWPORT_BUFFER && camY - camHeight / 2 > 0) {
-            camera.position.y = planeY + camHeight / 2 - VIEWPORT_BUFFER;
+            float newPos = planeY + camHeight / 2 - VIEWPORT_BUFFER;
+            camera.position.y = newPos - camHeight / 2 >= 0 ? newPos : camHeight / 2;
         }
         camera.update();
     }
@@ -363,6 +413,11 @@ public class GameScreen extends InputAdapter implements Screen {
             }
         } else if (gameEvent instanceof AccelEvent) {
             ((PlaneData)enemyPlane.getUserData()).acceleration = ((AccelEvent) gameEvent).getAcceleration();
+        } else if (gameEvent instanceof ExitEvent) {
+            opponentDisconnected = true;
+            session.cancel();
+            swapInputProcessor();
+            glyphLayout.setText(font, "enemy disconnected");
         }
     }
 
@@ -417,6 +472,17 @@ public class GameScreen extends InputAdapter implements Screen {
             session.getSenderThread().addToQueue(new AccelEvent(acceleration));
             ((PlaneData)plane.getUserData()).acceleration = acceleration;
         }
+        return false;
+    }
+
+    @Override
+    public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        screenY = Gdx.graphics.getHeight() - screenY;
+        if (settingsRectangle.contains(screenX, screenY)) {
+            showSettings = true;
+            Gdx.input.setInputProcessor(stage);
+        }
+        //todo other controls
         return false;
     }
 

@@ -1,15 +1,18 @@
 package org.antego.dev.network;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.net.Socket;
 
 import org.antego.dev.events.AccelEvent;
+import org.antego.dev.events.ExitEvent;
 import org.antego.dev.events.FireEvent;
 import org.antego.dev.events.GameEvent;
 import org.antego.dev.events.RotateEvent;
 import org.antego.dev.events.ShootEvent;
 import org.antego.dev.events.StatusEvent;
 import org.antego.dev.screen.GameScreen;
+import org.antego.dev.util.Constants;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -37,10 +40,13 @@ public class UpdateThread extends Thread {
         try {
             while (!Thread.currentThread().isInterrupted() && socket.isConnected()) {
                 byte[] messageType = new byte[1];
-                int len = socket.getInputStream().read(messageType);
-                if (len == -1) {
-                    throw new EOFException();
-                }
+                int len;
+                do {
+                    len = socket.getInputStream().read(messageType);
+                    if (len == -1) {
+                        throw new EOFException();
+                    }
+                } while (getMessageLength(messageType[0]) == -1);
                 byte[] message = new byte[getMessageLength(messageType[0])];
                 len = socket.getInputStream().read(message);
                 if (len == -1) {
@@ -51,8 +57,8 @@ public class UpdateThread extends Thread {
                 }
                 doBusiness(messageType[0], message);
             }
-        } catch (IOException ignore) {
-
+        } catch (IOException e) {
+            Gdx.app.log(Constants.LOG_TAG, "exception while reading socket", e);
         }
     }
 
@@ -88,8 +94,11 @@ public class UpdateThread extends Thread {
                 case 4: {
                     final float accel = ByteBuffer.wrap(message, 0, 4).order(ByteOrder.BIG_ENDIAN).getFloat();
                     sendEventToGameScreen(new AccelEvent(accel));
+                    break;
                 }
-
+                case 5: {
+                    sendEventToGameScreen(new ExitEvent());
+                }
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -116,6 +125,8 @@ public class UpdateThread extends Thread {
                 return 0;
             case 4:
                 return 4;
+            case 5:
+                return 0;
             default:
                 return -1;
         }

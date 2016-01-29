@@ -3,9 +3,11 @@ package org.antego.dev.screen;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.g2d.ParticleEffect;
+import com.badlogic.gdx.graphics.g2d.ParticleEmitter;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -27,10 +29,10 @@ public class MenuScreen extends InputAdapter implements Screen {
     private Skin skin;
     private Stage stage = new Stage();
     private PlanesGame game;
-    private final ParticleEffect stars = new ParticleEffect();
+    private final ParticleEffect stars;
     private volatile ScreenType changeTo;
 
-    public MenuScreen(final PlanesGame game) {
+    public MenuScreen(final PlanesGame game, ParticleEffect stars) {
         this.game = game;
         Gdx.input.setInputProcessor(stage);
         skin = new Skin(Gdx.files.internal("data/uiskin.json"));
@@ -59,6 +61,18 @@ public class MenuScreen extends InputAdapter implements Screen {
         table.add(quitLabel);
         rootTable.add(table);
         stage.addActor(rootTable);
+
+        if (stars != null) {
+            this.stars = stars;
+        } else {
+            this.stars = new ParticleEffect();
+            this.stars.load(new FileHandle("menuStars.particles"), new FileHandle(""));
+            int pixelWidth = Gdx.graphics.getWidth();
+            int pixelHeight = Gdx.graphics.getHeight();
+            ParticleEmitter emitter = this.stars.getEmitters().first();
+            emitter.setPosition(pixelWidth / 2, pixelHeight / 2);
+            this.stars.start();
+        }
     }
 
     @Override
@@ -73,11 +87,11 @@ public class MenuScreen extends InputAdapter implements Screen {
         if(changeTo != null) {
             switch (changeTo) {
                 case QUICK_GAME:
-                    game.setScreen(new StartGameScreen(game));
+                    game.setScreen(new StartGameScreen(game, stars));
                     dispose();
                     break;
                 case FRIEND_GAME:
-                    game.setScreen(new StartGameScreen(game));
+                    game.setScreen(new StartGameScreen(game, stars));
                     dispose();
                     break;
                 case NONE:

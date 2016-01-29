@@ -9,6 +9,7 @@ import com.badlogic.gdx.utils.GdxRuntimeException;
 import org.antego.dev.screen.GameScreen;
 import org.antego.dev.util.Constants;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.concurrent.Callable;
 
@@ -90,8 +91,13 @@ public class OnlineSession implements Callable<Void> {
     private WorldParameters setupMultiplayerWorld() {
         byte[] worldParam = new byte[1];
         try {
-            int len = socket.getInputStream().read(worldParam);
-            if (len == -1) throw new IOException("eof");
+            int len;
+            do {
+                len = socket.getInputStream().read(worldParam);
+                if (len == -1) {
+                    throw new EOFException("eof");
+                }
+            } while (worldParam[0] != 0 && worldParam[0] != 1);
         } catch (IOException e) {
             Gdx.app.error(Constants.LOG_TAG, "Exception while reading world param", e);
             return null;

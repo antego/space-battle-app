@@ -11,7 +11,7 @@ public class PlanesGame extends Game {
 	
 	@Override
 	public void create () {
-        menuScreen = new MenuScreen(this);
+        menuScreen = new MenuScreen(this, null);
         setScreen(menuScreen);
 	}
 

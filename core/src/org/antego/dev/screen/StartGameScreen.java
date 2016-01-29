@@ -38,35 +38,40 @@ public class StartGameScreen implements Screen {
     private volatile OnlineSession onlineSession;
     private final Object sessionLock = new Object();
     private ExecutorService sessionExecutor = Executors.newSingleThreadExecutor();
-    private final ParticleEffect stars = new ParticleEffect();
+    private final ParticleEffect stars;
     private volatile boolean toMainScreen;
-    private Animation loadingAnimation;
+//    private Animation loadingAnimation;
     private Label statusLabel;
     private volatile Future<Void> result;
 
 
-    public StartGameScreen(PlanesGame game) {
+    public StartGameScreen(PlanesGame game, ParticleEffect stars) {
         this.game = game;
 
         skin = new Skin(Gdx.files.internal("data/uiskin.json"));
         Skin skinSmall = new Skin(Gdx.files.internal("data/uiskin-old.json"));
 
-        TextureAtlas atlas = new TextureAtlas(Gdx.files.internal("loadingIndicator.atlas"));
-        loadingAnimation = new Animation(1/30, atlas.getRegions());
-        int pixelWidth = Gdx.graphics.getWidth();
-        int pixelHeight = Gdx.graphics.getHeight();
-        stars.load(new FileHandle("menuStars.particles"), new FileHandle(""));
-        ParticleEmitter emitter = stars.getEmitters().first();
-        emitter.setPosition(pixelWidth / 2, pixelHeight / 2);
-        stars.start();
+//        TextureAtlas atlas = new TextureAtlas(Gdx.files.internal("loadingIndicator.atlas"));
+//        loadingAnimation = new Animation(1/30, atlas.getRegions());
+        if (stars != null) {
+            this.stars = stars;
+        } else {
+            this.stars = new ParticleEffect();
+            this.stars.load(new FileHandle("menuStars.particles"), new FileHandle(""));
+            int pixelWidth = Gdx.graphics.getWidth();
+            int pixelHeight = Gdx.graphics.getHeight();
+            ParticleEmitter emitter = this.stars.getEmitters().first();
+            emitter.setPosition(pixelWidth / 2, pixelHeight / 2);
+            this.stars.start();
+        }
 
         Table rootTable = new Table();
         rootTable.setFillParent(true);
         Table table = new Table(skin);
         table.debug();
         final Label startLabel = new Label("Connect", skin);
-        final Label cancelLabel = new Label("Back", skin);
         statusLabel = new Label("", skinSmall);
+        final Label cancelLabel = new Label("Back", skin);
 
         startLabel.addListener(new ClickListener() {
             @Override
@@ -85,19 +90,14 @@ public class StartGameScreen implements Screen {
         cancelLabel.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                synchronized (sessionLock) {
-                    if (onlineSession != null && onlineSession.isStarted()) {
-                        onlineSession.cancel();
-                    }
-                }
                 toMainScreen = true;
             }
         });
-        table.add(startLabel).spaceBottom(40);
+        table.add(startLabel);
+        table.row();
+        table.add(statusLabel).spaceBottom(40);
         table.row();
         table.add(cancelLabel);
-        table.row();
-        table.add(statusLabel);
         rootTable.add(table);
         stage.addActor(rootTable);
         Gdx.input.setInputProcessor(stage);
@@ -118,7 +118,7 @@ public class StartGameScreen implements Screen {
         //batch.draw(loadingAnimation.getKeyFrame(delta, true), statusLabel.getX() - 20, statusLabel.getY());
         batch.end();
         if (toMainScreen) {
-            game.setScreen(new MenuScreen(game));
+            game.setScreen(new MenuScreen(game, stars));
             dispose();
         } else if (result != null && result.isDone()) {
             try {
