@@ -198,7 +198,6 @@ public class GameScreen extends InputAdapter implements Screen {
         rootTable.setFillParent(true);
 
         Table table = new Table(skin);
-        table.debug();
         continueLabel = new Label("Continue", skin);
         exitLabel = new Label("Exit", skin);
         continueLabel.addListener(new ClickListener(){
@@ -295,7 +294,7 @@ public class GameScreen extends InputAdapter implements Screen {
         counter.draw(batch);
         batch.end();
         updateCameraPosition();
-        renderer.render(world, camera.combined);
+//        renderer.render(world, camera.combined);
         if (changeScreen) {
             dispose();
             game.setScreen(new StartGameScreen(game, null));

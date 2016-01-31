@@ -68,8 +68,8 @@ public class StartGameScreen implements Screen {
         Table rootTable = new Table();
         rootTable.setFillParent(true);
         Table table = new Table(skin);
-        table.debug();
-        final Label startLabel = new Label("Connect", skin);
+//        table.debug();
+        final Label startLabel = new Label("Start", skin);
         statusLabel = new Label("", skinSmall);
         final Label cancelLabel = new Label("Back", skin);
 

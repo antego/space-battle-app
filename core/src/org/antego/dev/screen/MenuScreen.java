@@ -41,7 +41,7 @@ public class MenuScreen extends InputAdapter implements Screen {
         rootTable.setFillParent(true);
 
         Table table = new Table(skin);
-        table.debug();
+//        table.debug();
         final Label quickGameLabel = new Label("New Game", skin);
         final Label quitLabel = new Label("Quit", skin);
         quickGameLabel.addListener(new ClickListener(){
