@@ -2,6 +2,7 @@ package org.antego.dev.network;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.net.Socket;
+import com.badlogic.gdx.utils.GdxRuntimeException;
 
 import org.antego.dev.events.GameEvent;
 import org.antego.dev.util.Constants;
@@ -45,7 +46,13 @@ public class SenderThread extends Thread {
         } catch (InterruptedException ignore) {
 
         } catch (IOException e) {
-            Gdx.app.log(Constants.LOG_TAG, "exception while sending event", e);
+            logException(e);
+        } catch (GdxRuntimeException e) {
+            logException(e);
         }
+    }
+
+    private void logException(Throwable e) {
+        Gdx.app.log(Constants.LOG_TAG, "exception while sending event", e);
     }
 }

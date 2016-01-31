@@ -51,13 +51,13 @@ public class StartGameScreen implements Screen {
         skin = new Skin(Gdx.files.internal("data/uiskin.json"));
         Skin skinSmall = new Skin(Gdx.files.internal("data/uiskin-old.json"));
 
-//        TextureAtlas atlas = new TextureAtlas(Gdx.files.internal("loadingIndicator.atlas"));
-//        loadingAnimation = new Animation(1/30, atlas.getRegions());
+//        TextureAtlas atlas = new TextureAtlas("loadingIndicator.atlas");
+//        loadingAnimation = new Animation(1f/30, atlas.getRegions());
         if (stars != null) {
             this.stars = stars;
         } else {
             this.stars = new ParticleEffect();
-            this.stars.load(new FileHandle("menuStars.particles"), new FileHandle(""));
+            this.stars.load(Gdx.files.internal("menuStars.particles"), Gdx.files.internal(""));
             int pixelWidth = Gdx.graphics.getWidth();
             int pixelHeight = Gdx.graphics.getHeight();
             ParticleEmitter emitter = this.stars.getEmitters().first();
@@ -115,7 +115,7 @@ public class StartGameScreen implements Screen {
         batch.begin();
         stars.draw(batch, delta);
         stage.draw();
-        //batch.draw(loadingAnimation.getKeyFrame(delta, true), statusLabel.getX() - 20, statusLabel.getY());
+//        batch.draw(loadingAnimation.getKeyFrame(delta, true), statusLabel.getX() - 20, statusLabel.getY());
         batch.end();
         if (toMainScreen) {
             game.setScreen(new MenuScreen(game, stars));

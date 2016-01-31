@@ -12,6 +12,7 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.Sprite;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.physics.box2d.Body;
@@ -31,14 +32,16 @@ import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import org.antego.dev.PlanesGame;
 import org.antego.dev.events.AccelEvent;
 import org.antego.dev.events.ExitEvent;
-import org.antego.dev.events.FireEvent;
+import org.antego.dev.events.ShootEvent;
 import org.antego.dev.events.GameEvent;
 import org.antego.dev.events.RotateEvent;
-import org.antego.dev.events.ShootEvent;
+import org.antego.dev.events.HitEvent;
 import org.antego.dev.events.StatusEvent;
 import org.antego.dev.network.OnlineSession;
+import org.antego.dev.util.AnimationOnce;
 import org.antego.dev.util.BulletData;
 import org.antego.dev.util.Constants;
+import org.antego.dev.util.Counter;
 import org.antego.dev.util.PlaneData;
 import org.antego.dev.util.WorldUtils;
 
@@ -67,7 +70,7 @@ public class GameScreen extends InputAdapter implements Screen {
     private final Body enemyPlane;
     private final Box2DDebugRenderer renderer;
     private final OrthographicCamera camera;
-    private final int fontHeight;
+//    private final int fontHeight;
 
     private final Set<Body> bodiesToDestroy = Collections.synchronizedSet(new HashSet<Body>());
     private final Map<Long, Body> bulletMap = new HashMap<Long, Body>();
@@ -75,13 +78,18 @@ public class GameScreen extends InputAdapter implements Screen {
     private final GlyphLayout glyphLayout = new GlyphLayout();
     private final Vector2 bulletPos = new Vector2();
     private final BitmapFont font;
+    private final Counter counter = new Counter();
     private final Sprite starsSprite;
     private final Sprite settingsSprite;
+    private final Sprite shootSprite;
     private final Rectangle settingsRectangle;
+    private final Rectangle shootRectangle;
     private final Label continueLabel;
     private final Label exitLabel;
+    private final AnimationOnce explosion;
     private Skin skin;
     private Stage stage = new Stage();
+    private int lastPointer;
 
     private volatile boolean doShoot;
     private volatile boolean changeScreen;
@@ -101,9 +109,7 @@ public class GameScreen extends InputAdapter implements Screen {
 
         font = new BitmapFont(Gdx.files.internal("data/arialBig.fnt"));
         font.setColor(Color.WHITE);
-        this.fontHeight = Gdx.graphics.getHeight() / 8;
-        float scale = (float)fontHeight / 128;
-        font.getData().setScale(scale);
+        font.getData().setScale((float)Gdx.graphics.getHeight() / 8 / 128);
 
         camera = new OrthographicCamera(VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
         camera.position.set(camera.viewportWidth / 2, camera.viewportHeight / 2, 0f);
@@ -113,6 +119,9 @@ public class GameScreen extends InputAdapter implements Screen {
         float starsSide = Math.max(MAP_HEIGHT * WorldUtils.TO_SCREEN_HEIGHT, MAP_WIDTH * WorldUtils.TO_SCREEN_WIDTH);
         starsSprite.setSize(starsSide, starsSide);
 
+        TextureAtlas explosionAtlas = new TextureAtlas("explosions.atlas");
+        explosion = new AnimationOnce(1f/30, explosionAtlas.getRegions());
+
         settingsSprite = new Sprite(new Texture("settings-6-xl.png"));
         float settingsIconSize = Gdx.graphics.getHeight() / 15;
         settingsSprite.setSize(settingsIconSize, settingsIconSize);
@@ -121,6 +130,14 @@ public class GameScreen extends InputAdapter implements Screen {
                                             settingsSprite.getY(),
                                             Gdx.graphics.getWidth() - settingsSprite.getX(),
                                             Gdx.graphics.getHeight() - settingsSprite.getY());
+        shootSprite = new Sprite(new Texture("cross_gun.png"));
+        float shootIconSize = Gdx.graphics.getHeight() / 5;
+        shootSprite.setSize(shootIconSize, shootIconSize);
+        shootSprite.setPosition(Gdx.graphics.getWidth() - shootIconSize * 1.5f, shootIconSize * 0.5f);
+        shootRectangle = new Rectangle(shootSprite.getX() - shootIconSize * 0.5f,
+                0,
+                Gdx.graphics.getWidth() - shootIconSize * 2,
+                shootIconSize * 1.5f);
 
         renderer = new Box2DDebugRenderer();
         Gdx.input.setInputProcessor(this);
@@ -129,20 +146,23 @@ public class GameScreen extends InputAdapter implements Screen {
             public void run() {
                 session.getSenderThread().addToQueue(new StatusEvent(plane.getPosition(), plane.getLinearVelocity().cpy(), plane.getAngle()));
             }
-        }, 0, 1, TimeUnit.SECONDS);
+        }, 0, UPDATE_PERIOD_MILLIS, TimeUnit.MILLISECONDS);
 
         world.setContactListener(new ContactListener() {
             private void doContactLogic(Body plane, Body bullet) {
-                bodiesToDestroy.add(bullet);
-//                bullet.getUserData().setStateExplode();
                 if (plane == enemyPlane && !((BulletData) bullet.getUserData()).isEnemy()) {
+                    bodiesToDestroy.add(bullet);
                     int numOfHits = ++((PlaneData) plane.getUserData()).numOfHits;
-                    session.getSenderThread().addToQueue(new ShootEvent());
+                    counter.incrementSelf();
+                    session.getSenderThread().addToQueue(new HitEvent());
                     if (numOfHits >= 3) {
-//                    ((PlaneData) plane.getUserData()).setStateExplode();
+                    ((PlaneData) plane.getUserData()).setExploding(true);
                         glyphLayout.setText(font, "You won!");
                         swapInputProcessor();
+
                     }
+                } else if (plane == GameScreen.this.plane && ((BulletData) bullet.getUserData()).isEnemy()) {
+                    bodiesToDestroy.add(bullet);
                 }
             }
 
@@ -250,7 +270,6 @@ public class GameScreen extends InputAdapter implements Screen {
         while (iter.hasNext()) {
             Body bullet = iter.next();
             Sprite sprite = ((BulletData) bullet.getUserData()).getSprite();
-            sprite.rotate(bullet.getLinearVelocity().angle() - sprite.getRotation() - 90);
             bulletPos.x = bullet.getPosition().x;
             bulletPos.y = bullet.getPosition().y;
             WorldUtils.toScreen(bulletPos, camera);
@@ -259,11 +278,12 @@ public class GameScreen extends InputAdapter implements Screen {
             sprite.setPosition(bulletPos.x, bulletPos.y);
             sprite.draw(batch);
         }
-        Sprite sprite = drawSpriteOnBody(enemyPlane);
-        sprite.draw(batch);
-        sprite = drawSpriteOnBody(plane);
-        sprite.draw(batch);
-        settingsSprite.draw(batch);
+        drawSpriteOnBody(plane, delta, batch);
+        if (!showSettings && !endGame) {
+            settingsSprite.draw(batch);
+            shootSprite.draw(batch);
+        }
+        drawSpriteOnBody(enemyPlane, delta, batch);
         if (!glyphLayout.toString().isEmpty()) {
             float w = glyphLayout.width;
             float h = glyphLayout.height;
@@ -272,6 +292,7 @@ public class GameScreen extends InputAdapter implements Screen {
         if (showSettings) {
             stage.draw();
         }
+        counter.draw(batch);
         batch.end();
         updateCameraPosition();
         renderer.render(world, camera.combined);
@@ -280,6 +301,7 @@ public class GameScreen extends InputAdapter implements Screen {
             game.setScreen(new StartGameScreen(game, null));
         }
     }
+
 
     private void updateCameraPosition() {
         float planeX = plane.getPosition().x;
@@ -307,9 +329,10 @@ public class GameScreen extends InputAdapter implements Screen {
     }
     //eliminate redundant object creation in render loop
     private Vector2 posToConvert = new Vector2();
-    private Sprite drawSpriteOnBody(Body plane) {
-        Sprite sprite = ((PlaneData)plane.getUserData()).getSprite();
-        Vector2 spriteOffset = ((PlaneData)plane.getUserData()).getSpriteOffset().cpy();
+    private void drawSpriteOnBody(Body plane, float delta, SpriteBatch batch) {
+        PlaneData planeData = (PlaneData)plane.getUserData();
+        Sprite sprite = planeData.getSprite();
+        Vector2 spriteOffset = planeData.getSpriteOffset().cpy();
         spriteOffset.x = spriteOffset.x * WorldUtils.TO_SCREEN_WIDTH;
         spriteOffset.y = spriteOffset.y * WorldUtils.TO_SCREEN_HEIGHT;
         sprite.rotate(plane.getLinearVelocity().angle() - sprite.getRotation());
@@ -318,7 +341,11 @@ public class GameScreen extends InputAdapter implements Screen {
         WorldUtils.toScreen(posToConvert, camera);
         posToConvert.sub(spriteOffset);
         sprite.setPosition(posToConvert.x, posToConvert.y);
-        return sprite;
+        if (!planeData.isExploding()) {
+            sprite.draw(batch);
+        } else {
+            explosion.draw(delta, batch, posToConvert.x, posToConvert.y);
+        }
     }
 
     private void checkBoundsForBullets() {
@@ -345,14 +372,14 @@ public class GameScreen extends InputAdapter implements Screen {
         Sprite sprite = ((PlaneData)plane.getUserData()).getSprite();
         float originOffset = ((PlaneData)plane.getUserData()).getSpriteOffset().x / WorldUtils.TO_WORLD_WIDTH / sprite.getWidth();
         float bulletOffset = (1 - originOffset) * WorldUtils.TO_WORLD_WIDTH * sprite.getWidth();
-        bullet.setTransform(plane.getPosition().add(new Vector2(bulletOffset, 0).rotateRad(plane.getAngle())), 0);
+        bullet.setTransform(plane.getPosition().add(new Vector2(bulletOffset + 0.2f, 0).rotateRad(plane.getAngle())), 0);
         Vector2 tanVelo = new Vector2(0, plane.getAngularVelocity());
         //todo angular velocity
         Vector2 bulletVelocity = Constants.BULLET_VELOCITY.cpy().add(tanVelo).rotateRad(plane.getAngle());
         bullet.setLinearVelocity(bulletVelocity);
         lastShootTime = System.nanoTime();
         bulletMap.put(lastShootTime, bullet);
-        session.getSenderThread().addToQueue(new FireEvent(bulletVelocity, bullet.getPosition()));
+        session.getSenderThread().addToQueue(new ShootEvent(bulletVelocity, bullet.getPosition()));
     }
 
     private void checkBounds(Body plane) {
@@ -400,16 +427,18 @@ public class GameScreen extends InputAdapter implements Screen {
             enemyPlane.setLinearVelocity(((StatusEvent) gameEvent).getVelocity());
         } else if (gameEvent instanceof RotateEvent) {
             enemyPlane.setAngularVelocity(((RotateEvent) gameEvent).getAngularVelocity());
-        } else if (gameEvent instanceof FireEvent) {
-            Body bullet = WorldUtils.createBullet(world, true);
-            bullet.setTransform(((FireEvent) gameEvent).getPosition(), 0f);
-            bullet.setLinearVelocity(((FireEvent) gameEvent).getVelocity());
-            bulletMap.put(System.nanoTime(), bullet);
         } else if (gameEvent instanceof ShootEvent) {
+            Body bullet = WorldUtils.createBullet(world, true);
+            bullet.setTransform(((ShootEvent) gameEvent).getPosition(), 0f);
+            bullet.setLinearVelocity(((ShootEvent) gameEvent).getVelocity());
+            bulletMap.put(System.nanoTime(), bullet);
+        } else if (gameEvent instanceof HitEvent) {
             int hits = ++((PlaneData)plane.getUserData()).numOfHits;
+            counter.incrementEnemy();
             if (hits >= 3) {
                 glyphLayout.setText(font, "You lose!");
                 swapInputProcessor();
+                ((PlaneData) plane.getUserData()).setExploding(true);
             }
         } else if (gameEvent instanceof AccelEvent) {
             ((PlaneData)enemyPlane.getUserData()).acceleration = ((AccelEvent) gameEvent).getAcceleration();
@@ -478,11 +507,42 @@ public class GameScreen extends InputAdapter implements Screen {
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
         screenY = Gdx.graphics.getHeight() - screenY;
+        Float rotateSpeed = null;
         if (settingsRectangle.contains(screenX, screenY)) {
             showSettings = true;
             Gdx.input.setInputProcessor(stage);
+        } else if (shootRectangle.contains(screenX, screenY)) {
+            if (System.nanoTime() - lastShootTime > SHOOT_PERIOD) {
+                doShoot = true;
+            }
+        } else if (screenX < Gdx.graphics.getWidth() / 2) {
+            lastPointer = pointer;
+            rotateSpeed = angularSpeed;
+        } else if (screenX > Gdx.graphics.getWidth() / 2) {
+            lastPointer = pointer;
+            rotateSpeed = -angularSpeed;
+        }
+
+        if (rotateSpeed != null) {
+            session.getSenderThread().addToQueue(new RotateEvent(rotateSpeed));
+            plane.setAngularVelocity(rotateSpeed);
         }
         //todo other controls
+        return false;
+    }
+
+    @Override
+    public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+        screenY = Gdx.graphics.getHeight() - screenY;
+        Float rotateSpeed = null;
+        if (!settingsRectangle.contains(screenX, screenY) &&
+            !shootRectangle.contains(screenX, screenY)) {
+            rotateSpeed = 0f;
+        }
+        if (rotateSpeed != null && pointer == lastPointer) {
+            session.getSenderThread().addToQueue(new RotateEvent(rotateSpeed));
+            plane.setAngularVelocity(rotateSpeed);
+        }
         return false;
     }
 
@@ -514,9 +574,13 @@ public class GameScreen extends InputAdapter implements Screen {
     }
 
     private class EndGameInputProcessor extends InputAdapter {
+        private long createTime = System.nanoTime();
+
         @Override
         public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-            changeScreen = true;
+            if (System.nanoTime() - createTime > END_GAME_SCREEN_DURATION) {
+                changeScreen = true;
+            }
             return false;
         }
     }

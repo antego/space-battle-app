@@ -24,10 +24,10 @@ public class WorldUtils {
     public static final float TO_SCREEN_HEIGHT = (float)Gdx.graphics.getHeight() / Constants.VIEWPORT_HEIGHT;
     public static final float TO_WORLD_WIDTH = (float)Constants.VIEWPORT_WIDTH / Gdx.graphics.getWidth();
     public static final float TO_WORLD_HEIGHT = (float)Constants.VIEWPORT_HEIGHT / Gdx.graphics.getHeight();
-    private static TextureAtlas atlas;
+//    private static TextureAtlas atlas;
 
     public static World createWorld() {
-        atlas = new TextureAtlas(Gdx.files.internal("explosions.atlas"));
+//        atlas = new TextureAtlas(Gdx.files.internal("bullets.atlas"));
         return new World(Constants.WORLD_GRAVITY, true);
     }
 
@@ -88,9 +88,9 @@ public class WorldUtils {
         BulletData data = new BulletData();
         Sprite sprite;
         if (enemy) {
-            sprite = new Sprite(atlas.findRegion("bullet_2_blue"));
+            sprite = new Sprite(new Texture("data/blueBullet.png"));
         } else {
-            sprite = new Sprite(atlas.findRegion("bullet_2_orange"));
+            sprite = new Sprite(new Texture("data/redBullet.png"));
         }
         data.setSprite(sprite);
         data.setEnemy(enemy);

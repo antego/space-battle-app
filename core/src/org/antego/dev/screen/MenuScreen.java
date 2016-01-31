@@ -42,7 +42,7 @@ public class MenuScreen extends InputAdapter implements Screen {
 
         Table table = new Table(skin);
         table.debug();
-        final Label quickGameLabel = new Label("Quick Game", skin);
+        final Label quickGameLabel = new Label("New Game", skin);
         final Label quitLabel = new Label("Quit", skin);
         quickGameLabel.addListener(new ClickListener(){
             @Override
@@ -66,7 +66,8 @@ public class MenuScreen extends InputAdapter implements Screen {
             this.stars = stars;
         } else {
             this.stars = new ParticleEffect();
-            this.stars.load(new FileHandle("menuStars.particles"), new FileHandle(""));
+//            this.stars.load(new FileHandle("menuStars.particles"), new FileHandle(""));
+            this.stars.load(Gdx.files.internal("menuStars.particles"), Gdx.files.internal(""));
             int pixelWidth = Gdx.graphics.getWidth();
             int pixelHeight = Gdx.graphics.getHeight();
             ParticleEmitter emitter = this.stars.getEmitters().first();

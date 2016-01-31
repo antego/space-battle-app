@@ -6,10 +6,10 @@ import com.badlogic.gdx.net.Socket;
 
 import org.antego.dev.events.AccelEvent;
 import org.antego.dev.events.ExitEvent;
-import org.antego.dev.events.FireEvent;
+import org.antego.dev.events.ShootEvent;
 import org.antego.dev.events.GameEvent;
 import org.antego.dev.events.RotateEvent;
-import org.antego.dev.events.ShootEvent;
+import org.antego.dev.events.HitEvent;
 import org.antego.dev.events.StatusEvent;
 import org.antego.dev.screen.GameScreen;
 import org.antego.dev.util.Constants;
@@ -84,11 +84,11 @@ public class UpdateThread extends Thread {
                     final float y_velo = ByteBuffer.wrap(message, 4, 4).order(ByteOrder.BIG_ENDIAN).getFloat();
                     final float x_pos = ByteBuffer.wrap(message, 8, 4).order(ByteOrder.BIG_ENDIAN).getFloat();
                     final float y_pos = ByteBuffer.wrap(message, 12, 4).order(ByteOrder.BIG_ENDIAN).getFloat();
-                    sendEventToGameScreen(new FireEvent(new Vector2(x_velo, y_velo), new Vector2(x_pos, y_pos)));
+                    sendEventToGameScreen(new ShootEvent(new Vector2(x_velo, y_velo), new Vector2(x_pos, y_pos)));
                     break;
                 }
                 case 3: {
-                    sendEventToGameScreen(new ShootEvent());
+                    sendEventToGameScreen(new HitEvent());
                     break;
                 }
                 case 4: {
